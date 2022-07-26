@@ -15,6 +15,17 @@ impl Color for Vector3<f32> {
     }
 }
 
+struct Ray {
+    origin: Vector3<f32>,
+    direction: Vector3<f32>,
+}
+
+impl Ray {
+    fn at(&self, t: f32) -> Vector3<f32> {
+        self.origin + t * self.direction
+    }
+}
+
 fn main() {
     const IMAGE_WIDTH: i32 = 256;
     const IMAGE_HEIGHT: i32 = 256;
