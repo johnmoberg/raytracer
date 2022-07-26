@@ -7,6 +7,8 @@ fn main() {
     let mut content = format!("P3\n {} {}\n255\n", IMAGE_WIDTH, IMAGE_HEIGHT);
 
     for j in (0..IMAGE_HEIGHT).rev() {
+        eprintln!("Scanlines remaining: {}", j);
+
         for i in 0..IMAGE_WIDTH {
             let r = (i as f32) / (IMAGE_WIDTH - 1) as f32;
             let g = (j as f32) / (IMAGE_HEIGHT - 1) as f32;
@@ -21,4 +23,5 @@ fn main() {
     }
 
     print!("{}", content);
+    eprintln!("\nDone!");
 }
