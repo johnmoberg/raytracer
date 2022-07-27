@@ -26,10 +26,24 @@ impl Ray {
     }
 
     fn color(&self) -> impl Color {
+        if hit_sphere(Vector3::new(0.0, 0.0, -1.0), 0.5, &self) {
+            return Vector3::new(1.0, 0.0, 0.0);
+        }
+
         let normalized_direction = self.direction.normalize();
         let t = 0.5 * (normalized_direction.y + 1.0);
         (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
+}
+
+fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> bool {
+    let oc = ray.origin - center;
+    let a = ray.direction.dot(&ray.direction);
+    let b = 2.0 * oc.dot(&ray.direction);
+    let c = oc.dot(&oc) - radius * radius;
+    let discriminant = b * b - 4.0 * a * c;
+
+    discriminant > 0.0
 }
 
 fn main() {
