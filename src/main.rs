@@ -40,22 +40,22 @@ impl Ray {
 
 fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     let oc = ray.origin - center;
-    let a = ray.direction.dot(&ray.direction);
-    let b = 2.0 * oc.dot(&ray.direction);
-    let c = oc.dot(&oc) - radius * radius;
-    let discriminant = b * b - 4.0 * a * c;
+    let a = ray.direction.norm_squared();
+    let half_b = oc.dot(&ray.direction);
+    let c = oc.norm_squared() - radius * radius;
+    let discriminant = half_b * half_b - a * c;
 
     if discriminant < 0.0 {
         -1.0
     } else {
-        (-b - discriminant.sqrt()) / (2.0 * a)
+        (-half_b - discriminant.sqrt()) / a
     }
 }
 
 fn main() {
     // Image
     const ASPECT_RATIO: f32 = 16.0 / 9.0;
-    const IMAGE_WIDTH: i32 = 400;
+    const IMAGE_WIDTH: i32 = 1280;
     const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as i32;
 
     // Camera
