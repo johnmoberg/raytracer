@@ -25,23 +25,9 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    fn color(&self) -> impl Color {
-        let objects = Objects {
-            objects: vec![
-                Box::new(Sphere {
-                    center: Vector3::new(0.0, 0.0, -1.0),
-                    radius: 0.5,
-                }),
-                Box::new(Sphere {
-                    center: Vector3::new(0.5, 0.3, -0.9),
-                    radius: 0.25,
-                }),
-            ],
-        };
-
-        if let Some(hit) = objects.hit(self, 0.0, 1000.0) {
-            let n = self.at(hit.t) - Vector3::new(0.0, 0.0, -1.0);
-            return 0.5 * Vector3::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
+    fn color(&self, world: &dyn Hittable) -> impl Color {
+        if let Some(hit) = world.hit(self, 0.0, 1000.0) {
+            return 0.5 * (hit.normal + Vector3::new(1.0, 1.0, 1.0)); 
         }
 
         let normalized_direction = self.direction.normalize();
@@ -137,6 +123,20 @@ fn main() {
     const IMAGE_WIDTH: i32 = 1280;
     const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as i32;
 
+    // World
+    let world = Objects {
+        objects: vec![
+            Box::new(Sphere {
+                center: Vector3::new(0.0, 0.0, -1.0),
+                radius: 0.5,
+            }),
+            Box::new(Sphere {
+                center: Vector3::new(0.0, -100.5, -1.0),
+                radius: 100.0,
+            }),
+        ],
+    };
+
     // Camera
     let viewport_height = 2.0;
     let viewport_width = ASPECT_RATIO * viewport_height;
@@ -161,7 +161,7 @@ fn main() {
                 origin,
                 direction: lower_left_corner + u * horizontal + v * vertical - origin,
             };
-            let color = ray.color();
+            let color = ray.color(&world);
 
             content.push_str(&Color::to_string(&color));
         }
