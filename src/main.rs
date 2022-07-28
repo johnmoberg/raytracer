@@ -31,7 +31,7 @@ impl Ray {
             radius: 0.5,
         };
 
-        if let Some(hit) = sphere.hit(&self, 0.0, 1000.0) {
+        if let Some(hit) = sphere.hit(self, 0.0, 1000.0) {
             let n = self.at(hit.t) - Vector3::new(0.0, 0.0, -1.0);
             return 0.5 * Vector3::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
         }
@@ -46,6 +46,24 @@ pub struct HitRecord {
     p: Vector3<f32>,
     normal: Vector3<f32>,
     t: f32,
+    front_face: bool,
+}
+
+impl HitRecord {
+    fn from(ray: &Ray, p: Vector3<f32>, t: f32, outward_normal: Vector3<f32>) -> Self {
+        let front_face = ray.direction.dot(&outward_normal) < 0.0;
+
+        Self {
+            p,
+            normal: if front_face {
+                outward_normal
+            } else {
+                -outward_normal
+            },
+            t,
+            front_face,
+        }
+    }
 }
 
 pub trait Hittable {
@@ -80,9 +98,8 @@ impl Hittable for Sphere {
 
         let t = root;
         let p = ray.at(root);
-        let normal = (p - self.center) / self.radius;
 
-        Some(HitRecord { p, normal, t })
+        Some(HitRecord::from(ray, p, t, (p - self.center) / self.radius))
     }
 }
 
