@@ -26,12 +26,20 @@ impl Ray {
     }
 
     fn color(&self) -> impl Color {
-        let sphere = Sphere {
-            center: Vector3::new(0.0, 0.0, -1.0),
-            radius: 0.5,
+        let objects = Objects {
+            objects: vec![
+                Box::new(Sphere {
+                    center: Vector3::new(0.0, 0.0, -1.0),
+                    radius: 0.5,
+                }),
+                Box::new(Sphere {
+                    center: Vector3::new(0.5, 0.3, -0.9),
+                    radius: 0.25,
+                }),
+            ],
         };
 
-        if let Some(hit) = sphere.hit(self, 0.0, 1000.0) {
+        if let Some(hit) = objects.hit(self, 0.0, 1000.0) {
             let n = self.at(hit.t) - Vector3::new(0.0, 0.0, -1.0);
             return 0.5 * Vector3::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
         }
@@ -100,6 +108,26 @@ impl Hittable for Sphere {
         let p = ray.at(root);
 
         Some(HitRecord::from(ray, p, t, (p - self.center) / self.radius))
+    }
+}
+
+pub struct Objects {
+    objects: Vec<Box<dyn Hittable>>,
+}
+
+impl Hittable for Objects {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        let mut closest_so_far = t_max;
+        let mut closest_hit = None;
+
+        for object in &self.objects {
+            if let Some(hit) = object.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit.t;
+                closest_hit = Some(hit);
+            }
+        }
+
+        closest_hit
     }
 }
 
