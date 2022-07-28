@@ -1,18 +1,24 @@
 extern crate nalgebra as na;
 use na::Vector3;
+use rand::prelude::*;
 
 trait Color {
-    fn to_string(&self) -> String;
+    fn to_string(&self, samples_per_pixel: i32) -> String;
 }
 
-impl Color for Vector3<f32> {
-    fn to_string(&self) -> String {
-        let ir = (255.999 * self.x) as i32;
-        let ig = (255.999 * self.y) as i32;
-        let ib = (255.999 * self.z) as i32;
+fn color_to_string(color: &Vector3<f32>, samples_per_pixel: i32) -> String {
+    let (mut r, mut g, mut b) = (color.x, color.y, color.z);
 
-        format!("{} {} {}\n", ir, ig, ib)
-    }
+    let scale = 1.0 / (samples_per_pixel as f32);
+    r *= scale;
+    g *= scale;
+    b *= scale;
+
+    let ir = (256.0 * r.clamp(0.0, 0.999)) as i32;
+    let ig = (256.0 * g.clamp(0.0, 0.999)) as i32;
+    let ib = (256.0 * b.clamp(0.0, 0.999)) as i32;
+
+    format!("{} {} {}\n", ir, ig, ib)
 }
 
 pub struct Camera {
@@ -62,7 +68,7 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    fn color(&self, world: &dyn Hittable) -> impl Color {
+    fn color(&self, world: &dyn Hittable) -> Vector3<f32> {
         if let Some(hit) = world.hit(self, 0.0, 1000.0) {
             return 0.5 * (hit.normal + Vector3::new(1.0, 1.0, 1.0));
         }
@@ -157,8 +163,9 @@ impl Hittable for Objects {
 fn main() {
     // Image
     const ASPECT_RATIO: f32 = 16.0 / 9.0;
-    const IMAGE_WIDTH: i32 = 512;
+    const IMAGE_WIDTH: i32 = 1024;
     const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as i32;
+    const SAMPLES_PER_PIXEL: i32 = 100;
 
     // World
     let world = Objects {
@@ -180,16 +187,21 @@ fn main() {
     // Render
     let mut content = format!("P3\n {} {}\n255\n", IMAGE_WIDTH, IMAGE_HEIGHT);
 
+    let mut rng = rand::thread_rng();
     for j in (0..IMAGE_HEIGHT).rev() {
         eprintln!("Scanlines remaining: {}", j);
 
         for i in 0..IMAGE_WIDTH {
-            let u = i as f32 / (IMAGE_WIDTH - 1) as f32;
-            let v = j as f32 / (IMAGE_HEIGHT - 1) as f32;
-            let ray = camera.get_ray(u, v);
-            let color = ray.color(&world);
+            let mut pixel_color = Vector3::new(0.0, 0.0, 0.0);
 
-            content.push_str(&Color::to_string(&color));
+            for _ in 0..SAMPLES_PER_PIXEL {
+                let u = (i as f32 + rng.gen::<f32>()) / (IMAGE_WIDTH - 1) as f32;
+                let v = (j as f32 + rng.gen::<f32>()) / (IMAGE_HEIGHT - 1) as f32;
+                let ray = camera.get_ray(u, v);
+                pixel_color += ray.color(&world);
+            }
+
+            content.push_str(&color_to_string(&pixel_color, SAMPLES_PER_PIXEL));
         }
     }
 
