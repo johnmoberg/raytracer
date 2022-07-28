@@ -15,6 +15,43 @@ impl Color for Vector3<f32> {
     }
 }
 
+pub struct Camera {
+    origin: Vector3<f32>,
+    horizontal: Vector3<f32>,
+    vertical: Vector3<f32>,
+    lower_left_corner: Vector3<f32>,
+}
+
+impl Camera {
+    fn new(aspect_ratio: f32) -> Self {
+        let viewport_height = 2.0;
+        let viewport_width = aspect_ratio * viewport_height;
+        let focal_length = 1.0;
+
+        let origin = Vector3::new(0.0, 0.0, 0.0);
+        let horizontal = Vector3::new(viewport_width, 0.0, 0.0);
+        let vertical = Vector3::new(0.0, viewport_height, 0.0);
+
+        let lower_left_corner =
+            origin - horizontal / 2.0 - vertical / 2.0 - Vector3::new(0.0, 0.0, focal_length);
+
+        Camera {
+            origin,
+            horizontal,
+            vertical,
+            lower_left_corner,
+        }
+    }
+
+    fn get_ray(&self, u: f32, v: f32) -> Ray {
+        Ray {
+            origin: self.origin,
+            direction: self.lower_left_corner + u * self.horizontal + v * self.vertical
+                - self.origin,
+        }
+    }
+}
+
 pub struct Ray {
     origin: Vector3<f32>,
     direction: Vector3<f32>,
@@ -27,7 +64,7 @@ impl Ray {
 
     fn color(&self, world: &dyn Hittable) -> impl Color {
         if let Some(hit) = world.hit(self, 0.0, 1000.0) {
-            return 0.5 * (hit.normal + Vector3::new(1.0, 1.0, 1.0)); 
+            return 0.5 * (hit.normal + Vector3::new(1.0, 1.0, 1.0));
         }
 
         let normalized_direction = self.direction.normalize();
@@ -120,7 +157,7 @@ impl Hittable for Objects {
 fn main() {
     // Image
     const ASPECT_RATIO: f32 = 16.0 / 9.0;
-    const IMAGE_WIDTH: i32 = 1280;
+    const IMAGE_WIDTH: i32 = 512;
     const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as i32;
 
     // World
@@ -138,15 +175,7 @@ fn main() {
     };
 
     // Camera
-    let viewport_height = 2.0;
-    let viewport_width = ASPECT_RATIO * viewport_height;
-    let focal_length = 1.0;
-
-    let origin = Vector3::new(0.0, 0.0, 0.0);
-    let horizontal = Vector3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vector3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner =
-        origin - horizontal / 2.0 - vertical / 2.0 - Vector3::new(0.0, 0.0, focal_length);
+    let camera = Camera::new(ASPECT_RATIO);
 
     // Render
     let mut content = format!("P3\n {} {}\n255\n", IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -157,10 +186,7 @@ fn main() {
         for i in 0..IMAGE_WIDTH {
             let u = i as f32 / (IMAGE_WIDTH - 1) as f32;
             let v = j as f32 / (IMAGE_HEIGHT - 1) as f32;
-            let ray = Ray {
-                origin,
-                direction: lower_left_corner + u * horizontal + v * vertical - origin,
-            };
+            let ray = camera.get_ray(u, v);
             let color = ray.color(&world);
 
             content.push_str(&Color::to_string(&color));
