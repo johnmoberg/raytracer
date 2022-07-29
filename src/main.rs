@@ -1,4 +1,6 @@
 extern crate nalgebra as na;
+use std::thread::Thread;
+
 use na::Vector3;
 use rand::prelude::*;
 
@@ -63,14 +65,40 @@ pub struct Ray {
     direction: Vector3<f32>,
 }
 
+fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vector3<f32> {
+    loop {
+        let mut v = Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>());
+        v = 2.0 * v - Vector3::new(1.0, 1.0, 1.0);
+
+        if v.norm_squared() < 1.0 {
+            return v;
+        }
+    }
+}
+
 impl Ray {
     fn at(&self, t: f32) -> Vector3<f32> {
         self.origin + t * self.direction
     }
 
-    fn color(&self, world: &dyn Hittable) -> Vector3<f32> {
+    fn color(&self, world: &dyn Hittable, depth: i32, rng: &mut ThreadRng) -> Vector3<f32> {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if depth <= 0 {
+            return Vector3::new(0.0, 0.0, 0.0);
+        }
+
         if let Some(hit) = world.hit(self, 0.0, 1000.0) {
-            return 0.5 * (hit.normal + Vector3::new(1.0, 1.0, 1.0));
+            let target = hit.p + hit.normal + random_in_unit_sphere(rng);
+            return 0.5
+                * Ray::color(
+                    &Ray {
+                        origin: hit.p,
+                        direction: target - hit.p,
+                    },
+                    world,
+                    depth - 1,
+                    rng,
+                );
         }
 
         let normalized_direction = self.direction.normalize();
@@ -166,6 +194,7 @@ fn main() {
     const IMAGE_WIDTH: i32 = 1024;
     const IMAGE_HEIGHT: i32 = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as i32;
     const SAMPLES_PER_PIXEL: i32 = 100;
+    const MAX_DEPTH: i32 = 50;
 
     // World
     let world = Objects {
@@ -188,6 +217,7 @@ fn main() {
     let mut content = format!("P3\n {} {}\n255\n", IMAGE_WIDTH, IMAGE_HEIGHT);
 
     let mut rng = rand::thread_rng();
+
     for j in (0..IMAGE_HEIGHT).rev() {
         eprintln!("Scanlines remaining: {}", j);
 
@@ -198,7 +228,7 @@ fn main() {
                 let u = (i as f32 + rng.gen::<f32>()) / (IMAGE_WIDTH - 1) as f32;
                 let v = (j as f32 + rng.gen::<f32>()) / (IMAGE_HEIGHT - 1) as f32;
                 let ray = camera.get_ray(u, v);
-                pixel_color += ray.color(&world);
+                pixel_color += ray.color(&world, MAX_DEPTH, &mut rng);
             }
 
             content.push_str(&color_to_string(&pixel_color, SAMPLES_PER_PIXEL));
