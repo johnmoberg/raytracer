@@ -11,10 +11,11 @@ trait Color {
 fn color_to_string(color: &Vector3<f32>, samples_per_pixel: i32) -> String {
     let (mut r, mut g, mut b) = (color.x, color.y, color.z);
 
+    // Divide the color by the number of samples and gamma-correct for gamma=2.0.
     let scale = 1.0 / (samples_per_pixel as f32);
-    r *= scale;
-    g *= scale;
-    b *= scale;
+    r = (scale * r).sqrt();
+    g = (scale * g).sqrt();
+    b = (scale * b).sqrt();
 
     let ir = (256.0 * r.clamp(0.0, 0.999)) as i32;
     let ig = (256.0 * g.clamp(0.0, 0.999)) as i32;
@@ -87,7 +88,7 @@ impl Ray {
             return Vector3::new(0.0, 0.0, 0.0);
         }
 
-        if let Some(hit) = world.hit(self, 0.0, 1000.0) {
+        if let Some(hit) = world.hit(self, 0.001, 1000.0) {
             let target = hit.p + hit.normal + random_in_unit_sphere(rng);
             return 0.5
                 * Ray::color(
