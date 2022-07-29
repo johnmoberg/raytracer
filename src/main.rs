@@ -66,13 +66,13 @@ pub struct Ray {
     direction: Vector3<f32>,
 }
 
-fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vector3<f32> {
+fn random_unit_vector(rng: &mut ThreadRng) -> Vector3<f32> {
     loop {
         let mut v = Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>());
         v = 2.0 * v - Vector3::new(1.0, 1.0, 1.0);
 
         if v.norm_squared() < 1.0 {
-            return v;
+            return v / v.norm();
         }
     }
 }
@@ -89,7 +89,7 @@ impl Ray {
         }
 
         if let Some(hit) = world.hit(self, 0.001, 1000.0) {
-            let target = hit.p + hit.normal + random_in_unit_sphere(rng);
+            let target = hit.p + hit.normal + random_unit_vector(rng);
             return 0.5
                 * Ray::color(
                     &Ray {
